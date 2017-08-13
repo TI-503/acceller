@@ -662,9 +662,11 @@ void sendPacket()
 		{
 			// error
 			sl_Close(iNewSockID);
-			//sl_Close(iSockID);
-			ASSERT_ON_ERROR(RECV_ERROR);
 			break;
+			Report("error send\r\n");
+			//sl_Close(iSockID);
+			ASSERT_ON_ERROR(SEND_ERROR);
+
 		}
 		Report("Sent packets successfully\n\r");
 
