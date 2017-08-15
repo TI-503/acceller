@@ -662,12 +662,6 @@ void sendPacket()
 		{
 			// error
 			sl_Close(iNewSockID);
-<<<<<<< HEAD
-			//sl_Close(iSockID);
-
-			Report("Recv Error\n\r");
-=======
->>>>>>> 12a8e7a6f7f845469b4f95d12d9691d4406c56fb
 			break;
 			Report("error send\r\n");
 			//sl_Close(iSockID);
@@ -1040,7 +1034,7 @@ static long WlanConnect()
 	secParams.KeyLen = strlen(SECURITY_KEY);
 	secParams.Type = SECURITY_TYPE;
 
-	//	Ìí¼ÓProfile
+	//	ï¿½ï¿½ï¿½Profile
 	lRetVal = sl_WlanProfileAdd(SSID_NAME,strlen(SSID_NAME),0,&secParams,0,0,0);
 	ASSERT_ON_ERROR(lRetVal);
 
