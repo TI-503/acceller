@@ -1313,17 +1313,17 @@ void main()
 		LOOP_FOREVER();
 	}
 
-	//
-	// Start the DuoJi task
-	//
-	lRetVal = osi_TaskCreate( DuoJiTask, \
-			(const signed char*)"DuoJi Task", \
-			OSI_STACK_SIZE, NULL, 1, NULL );
-	if(lRetVal < 0)
-	{
-		ERR_PRINT(lRetVal);
-		LOOP_FOREVER();
-	}
+//	//
+//	// Start the DuoJi task
+//	//
+//	lRetVal = osi_TaskCreate( DuoJiTask, \
+//			(const signed char*)"DuoJi Task", \
+//			OSI_STACK_SIZE, NULL, 1, NULL );
+//	if(lRetVal < 0)
+//	{
+//		ERR_PRINT(lRetVal);
+//		LOOP_FOREVER();
+//	}
 
 	//
 	// Start the task scheduler
