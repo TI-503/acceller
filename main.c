@@ -662,9 +662,9 @@ void sendPacket()
 		{
 			// error
 			sl_Close(iNewSockID);
-			break;
+			
 			Report("error send\r\n");
-			//sl_Close(iSockID);
+			break;
 			ASSERT_ON_ERROR(SEND_ERROR);
 
 		}
