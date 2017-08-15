@@ -113,7 +113,7 @@
 #define PING_PKT_SIZE       20      /* In bytes */
 #define NO_OF_ATTEMPTS      3
 
-#define OSI_STACK_SIZE      2048
+#define OSI_STACK_SIZE      1024
 
 #define IP_ADDR             0xc0a80A6E /* 192.168.1.110 */
 #define PORT_NUM            5001
@@ -663,7 +663,8 @@ void sendPacket()
 			// error
 			sl_Close(iNewSockID);
 			//sl_Close(iSockID);
-			ASSERT_ON_ERROR(RECV_ERROR);
+
+			Report("Recv Error\n\r");
 			break;
 		}
 		Report("Sent packets successfully\n\r");
@@ -1305,7 +1306,18 @@ void main()
 	lRetVal = osi_TaskCreate( WlanStationMode, \
 			(const signed char*)"Wlan Station Task", \
 			OSI_STACK_SIZE, NULL, 2, NULL );
+	if(lRetVal < 0)
+	{
+		ERR_PRINT(lRetVal);
+		LOOP_FOREVER();
+	}
 
+	//
+	// Start the DuoJi task
+	//
+	lRetVal = osi_TaskCreate( DuoJiTask, \
+			(const signed char*)"DuoJi Task", \
+			OSI_STACK_SIZE, NULL, 1, NULL );
 	if(lRetVal < 0)
 	{
 		ERR_PRINT(lRetVal);
