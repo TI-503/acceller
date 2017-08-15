@@ -662,10 +662,17 @@ void sendPacket()
 		{
 			// error
 			sl_Close(iNewSockID);
+<<<<<<< HEAD
 			//sl_Close(iSockID);
 
 			Report("Recv Error\n\r");
+=======
+>>>>>>> 12a8e7a6f7f845469b4f95d12d9691d4406c56fb
 			break;
+			Report("error send\r\n");
+			//sl_Close(iSockID);
+			ASSERT_ON_ERROR(SEND_ERROR);
+
 		}
 		Report("Sent packets successfully\n\r");
 
