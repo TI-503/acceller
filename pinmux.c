@@ -70,11 +70,7 @@ PinMuxConfig(void)
     //
     MAP_PinTypeUART(PIN_57, PIN_MODE_3);
 
-    //
-    // Configure PIN_58 for GPIOInput
-    //
-    MAP_PinTypeGPIO(PIN_58, PIN_MODE_0, false);
-    MAP_GPIODirModeSet(GPIOA0_BASE, 0x8, GPIO_DIR_MODE_IN);
+
 
     //
     // Configure PIN_64 for GPIOOutput
@@ -91,4 +87,16 @@ PinMuxConfig(void)
     // Configure PIN_02 for I2C0 I2C_SDA
     //
     MAP_PinTypeI2C(PIN_02, PIN_MODE_1);
+
+    // ¶æ»ú
+    //
+    // Configure PIN_58 for GPIO Output
+    //
+    PinTypeGPIO(PIN_58, PIN_MODE_0, false);
+    GPIODirModeSet(GPIOA0_BASE, 0x8, GPIO_DIR_MODE_OUT);
+    //
+    // Configure PIN_04 for GPIO Output
+    //
+    PinTypeGPIO(PIN_04, PIN_MODE_0, false);
+    GPIODirModeSet(GPIOA1_BASE, 0x20, GPIO_DIR_MODE_OUT);
 }

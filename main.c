@@ -166,6 +166,9 @@ unsigned int connect_flag = 0;
 float g_temp;
 int g_iServerSockID;
 int g_sockID;
+int g_isShake;
+int g_shakeEn;
+
 
 signed char g_cAccX,g_cAccY,g_cAccZ;
 
@@ -219,6 +222,101 @@ vAssertCalled( const char *pcFile, unsigned long ulLine )
 	}
 }
 
+void DelayMs(float time)
+{
+	unsigned long ulCount;
+	ulCount=80000*time/6;
+	UtilsDelay((unsigned long)ulCount);
+}
+
+//void doubleShake(float src_time, float dest_time)
+//{
+//	g_shakeEn = 1;
+//	//Report("%f, %f\r\n",src_time, dest_time);
+//	int loop = 25;
+//	float delta = (src_time - dest_time) / (loop-1);
+//	//Report("delta: %f\r\n",delta);
+//	int i;
+//	float start = src_time;
+//	float start_4 = dest_time;
+//	for( i =0 ;i<loop;i++)
+//	{
+//		//Report("start: %f\r\n",start);
+//		GPIOPinWrite(GPIOA0_BASE, 0x8, 0x8);
+//		//DelayMs(start);
+//		MAP_UtilsDelay((unsigned long)80000*start/6);
+//		GPIOPinWrite(GPIOA0_BASE, 0x8, 0);
+//		MAP_UtilsDelay((unsigned long)80000*(20-start)/6);
+//		//DelayMs(20.0-start);
+//
+//
+//		GPIOPinWrite(GPIOA1_BASE, 0x20,0x20);
+//		//DelayMs(start_4);
+//		MAP_UtilsDelay((unsigned long)80000*start_4/6);
+//		GPIOPinWrite(GPIOA1_BASE, 0x20,0);
+//		//DelayMs(20-start_4);
+//		MAP_UtilsDelay((unsigned long)80000*(20-start_4)/6);
+//
+//		start += delta;
+//		start_4 -= delta;
+//	}
+//}
+void doubleShake(float src_time, float dest_time)
+{
+	g_shakeEn = 1;
+	//Report("%f, %f\r\n",src_time, dest_time);
+	float delta = 0.005;
+	if(src_time<dest_time)
+	{
+
+	}
+	else
+	{
+		delta = - delta;
+	}
+	//Report("delta: %f\r\n",delta);
+	float start = src_time;
+	float start_4 = dest_time;
+	for( ; (delta >=0&&start<=dest_time) || (delta<0&&start>=dest_time);)
+	{
+		//Report("start: %f\r\n",start);
+		GPIOPinWrite(GPIOA0_BASE, 0x8, 0x8);
+		//DelayMs(start);
+		MAP_UtilsDelay((unsigned long)80000*start/6);
+		GPIOPinWrite(GPIOA0_BASE, 0x8, 0);
+		MAP_UtilsDelay((unsigned long)80000*(20-start)/6);
+		//DelayMs(20.0-start);
+
+
+		GPIOPinWrite(GPIOA1_BASE, 0x20,0x20);
+		//DelayMs(start_4);
+		MAP_UtilsDelay((unsigned long)80000*start_4/6);
+		GPIOPinWrite(GPIOA1_BASE, 0x20,0);
+		//DelayMs(20-start_4);
+		MAP_UtilsDelay((unsigned long)80000*(20-start_4)/6);
+
+		start += delta;
+		start_4 -= delta;
+	}
+}
+
+void noShake()
+{
+	g_shakeEn = 0;
+	int i = 0;
+	for(i=0;i<10;i++)
+	{
+		GPIOPinWrite(GPIOA0_BASE, 0x8, 0x8);
+		GPIOPinWrite(GPIOA1_BASE, 0x20,0x20);
+		//DelayMs(1.6);
+		MAP_UtilsDelay((unsigned long)80000*1.6/6);
+		GPIOPinWrite(GPIOA0_BASE, 0x8, 0);
+		GPIOPinWrite(GPIOA1_BASE, 0x20,0);
+		//DelayMs(20-1.6);
+		MAP_UtilsDelay((unsigned long)80000*(20-1.6)/6);
+
+	}
+}
 //*****************************************************************************
 //
 //! \brief Application defined idle task hook
@@ -604,11 +702,11 @@ void sendPacket()
 
 
 	// filling the buffer
-	for (iCounter = 0; iCounter<BUF_SIZE; iCounter++)
-	{
-		g_cBsdBuf[iCounter] = 0;
-	}
-
+	//	for (iCounter = 0; iCounter<BUF_SIZE; iCounter++)
+	//	{
+	//		g_cBsdBuf[iCounter] = 0;
+	//	}
+	memset(g_cBsdBuf,0,sizeof(g_cBsdBuf));
 	//delaySec(10);
 	Report("================================1\n\rWaiting for connection on 5001...\n\r");
 	// waiting for an incoming TCP connection
@@ -629,6 +727,28 @@ void sendPacket()
 			//sl_Close(iSockID);
 			ASSERT_ON_ERROR(ACCEPT_ERROR);
 		}
+		//Report("%d,%d\r\n",g_isShake ,g_shakeEn);
+		// if shake  then shake
+		// else than back to mid_pos
+		if (g_isShake == 1) // to left
+		{
+			doubleShake(1.6,1.5);
+			doubleShake(1.5,1.6);
+			g_isShake = 2;
+		}
+		else if(g_isShake == 2)
+		{
+			doubleShake(1.6,1.7);
+			doubleShake(1.7,1.6);
+			g_isShake = 1;
+		}
+		else
+		{
+			if(g_shakeEn == 1)
+			{
+				noShake();
+			}
+		}
 	}
 
 	Report("Accept a new connectiong from %d.%d.%d.%d:%d\n\r",
@@ -644,34 +764,110 @@ void sendPacket()
 	sl_SetSockOpt(iNewSockID,SL_SOL_SOCKET,SL_SO_NONBLOCKING, (_u8 *)&enableOption,sizeof(enableOption));
 
 
-	while(FOREVER){
-
-		//Get the TMP and Acc value
-		CollectTmp(NULL);
-		osi_Sleep(200);
-		CollectAcc(NULL);
-
-		// sending multiple packets to the TCP server
-
-		sprintf(g_cBsdBuf, "Temp is %.2f F AccX=%d,AccY=%d,AccZ=%d\n\r", g_temp, g_cAccX, g_cAccY, g_cAccZ);
-		UART_PRINT("socket - Temp is %.2f F AccX=%d,AccY=%d,AccZ=%d\n\r", g_temp, g_cAccX, g_cAccY, g_cAccZ);
-		UART_PRINT("%s", g_cBsdBuf);
-		// sending packet
-		iStatus = sl_Send(iNewSockID, g_cBsdBuf, iTestBufLen, 0 );
-		if (iStatus <= 0)
-		{
-			// error
-			sl_Close(iNewSockID);
-			
-			Report("error send\r\n");
-			break;
-			ASSERT_ON_ERROR(SEND_ERROR);
-
-		}
-		Report("Sent packets successfully\n\r");
-
-		osi_Sleep(1500);
+	// recv data
+	iStatus = sl_Recv(iNewSockID, g_cBsdBuf, iTestBufLen, 0);
+	if (iStatus <= 0)
+	{
+		// error
+		sl_Close(iNewSockID);
+		//sl_Close(iSockID);
+		ASSERT_ON_ERROR(RECV_ERROR);
 	}
+	Report("Recieved data %s\n\r",g_cBsdBuf);
+
+	if(strcmp(g_cBsdBuf,"getdata") == 0)
+	{
+		int first = 0;
+
+		while(1)
+		{
+			//Get the TMP and Acc value
+			CollectTmp(NULL);
+			osi_Sleep(200);
+			CollectAcc(NULL);
+			if(first != 0)
+			{
+				// 收数据
+				// recv data
+				memset(g_cBsdBuf,0,sizeof(g_cBsdBuf));
+				iStatus = sl_Recv(iNewSockID, g_cBsdBuf, iTestBufLen, 0);
+				if (iStatus <= 0)
+				{
+					// error
+					sl_Close(iNewSockID);
+					//sl_Close(iSockID);
+					ASSERT_ON_ERROR(RECV_ERROR);
+				}
+				Report("Recieved data %s\n\r",g_cBsdBuf);
+				if(strcmp(g_cBsdBuf,"shake") == 0)
+				{
+					g_isShake = 1;
+				}
+				else if(strcmp(g_cBsdBuf,"noshake") == 0)
+				{
+					g_isShake = 0;
+				}
+			}
+			first = 1;
+			// send data
+			sprintf(g_cBsdBuf, "Temp is %.2f F AccX=%d,AccY=%d,AccZ=%d\n\r", g_temp, g_cAccX, g_cAccY, g_cAccZ);
+			UART_PRINT("socket - Temp is %.2f F AccX=%d,AccY=%d,AccZ=%d\n\r", g_temp, g_cAccX, g_cAccY, g_cAccZ);
+			UART_PRINT("%s", g_cBsdBuf);
+			// sending packet
+			iStatus = sl_Send(iNewSockID, g_cBsdBuf, iTestBufLen, 0 );
+			osi_Sleep(50);
+			if (iStatus <= 0)
+			{
+				// error
+				sl_Close(iNewSockID);
+
+				Report("error send\r\n");
+				//break;
+				ASSERT_ON_ERROR(SEND_ERROR);
+
+			}
+			Report("Sent packets successfully\n\r");
+
+			if (g_isShake == 1) // to left
+			{
+				doubleShake(1.6,1.5);
+				doubleShake(1.5,1.6);
+				g_isShake = 2;
+			}
+			else if(g_isShake == 2)
+			{
+				doubleShake(1.6,1.7);
+				doubleShake(1.7,1.6);
+				g_isShake = 1;
+			}
+			else
+			{
+				if(g_shakeEn == 1)
+				{
+					noShake();
+				}
+			}
+		}
+
+	}
+	else if(strcmp(g_cBsdBuf,"shake") == 0)
+	{
+		g_isShake = 1;
+	}
+	else if(strcmp(g_cBsdBuf,"noshake") == 0)
+	{
+		g_isShake = 0;
+	}
+	else
+	{
+		UART_PRINT("Command Error\r\n");
+		sprintf(g_cBsdBuf, "Command Error\r\n");
+		sl_Send(iNewSockID, g_cBsdBuf, 60, 0);
+	}
+
+	sl_Close(iNewSockID);
+	Report("Connection closed.\n\r");
+	Report("================================\n\r");
 }
 
 //****************************************************************************
@@ -753,51 +949,6 @@ int BsdTcpServer(unsigned short usPort)
 		sl_Close(iSockID);
 		ASSERT_ON_ERROR(SOCKET_OPT_ERROR);
 	}
-	//	iNewSockID = SL_EAGAIN;
-	//
-	//	// waiting for an incoming TCP connection
-	//	while( iNewSockID < 0 )
-	//	{
-	//		// accepts a connection form a TCP client, if there is any
-	//		// otherwise returns SL_EAGAIN
-	//		iNewSockID = sl_Accept(iSockID, ( struct SlSockAddr_t *)&sAddr,
-	//				(SlSocklen_t*)&iAddrSize);
-	//		if( iNewSockID == SL_EAGAIN )
-	//		{
-	//			MAP_UtilsDelay(10000);
-	//		}
-	//		else if( iNewSockID < 0 )
-	//		{
-	//			// error
-	//			sl_Close(iNewSockID);
-	//			sl_Close(iSockID);
-	//			ASSERT_ON_ERROR(ACCEPT_ERROR);
-	//		}
-	//	}
-	//
-	//	// waits for 1000 packets from the connected TCP client
-	//	while (lLoopCount < g_ulPacketCount)
-	//	{
-	//		iStatus = sl_Recv(iNewSockID, g_cBsdBuf, iTestBufLen, 0);
-	//		if( iStatus <= 0 )
-	//		{
-	//			// error
-	//			sl_Close(iNewSockID);
-	//			sl_Close(iSockID);
-	//			ASSERT_ON_ERROR(RECV_ERROR);
-	//		}
-	//
-	//		lLoopCount++;
-	//	}
-	//
-	//	Report("Recieved %u packets successfully\n\r",g_ulPacketCount);
-	//
-	//	// close the connected socket after receiving from connected TCP client
-	//	iStatus = sl_Close(iNewSockID);
-	//	ASSERT_ON_ERROR(iStatus);
-	//	// close the listening socket
-	//	iStatus = sl_Close(iSockID);
-	//	ASSERT_ON_ERROR(iStatus);
 
 	return SUCCESS;
 }
@@ -1075,7 +1226,6 @@ static long WlanConnect()
 //****************************************************************************
 void WlanStationMode( void *pvParameters )
 {
-
 	long lRetVal = -1;
 	InitializeAppVariables();
 
@@ -1291,6 +1441,8 @@ void main()
 		LOOP_FOREVER();
 	}
 
+	// 舵机初始化
+	g_isShake = 0;
 	//
 	// Start the SimpleLink Host
 	//
@@ -1313,17 +1465,17 @@ void main()
 		LOOP_FOREVER();
 	}
 
-//	//
-//	// Start the DuoJi task
-//	//
-//	lRetVal = osi_TaskCreate( DuoJiTask, \
-//			(const signed char*)"DuoJi Task", \
-//			OSI_STACK_SIZE, NULL, 1, NULL );
-//	if(lRetVal < 0)
-//	{
-//		ERR_PRINT(lRetVal);
-//		LOOP_FOREVER();
-//	}
+	//	//
+	//	// Start the DuoJi task
+	//	//
+	//	lRetVal = osi_TaskCreate( DuoJiTask, \
+	//			(const signed char*)"DuoJi Task", \
+	//			OSI_STACK_SIZE, NULL, 1, NULL );
+	//	if(lRetVal < 0)
+	//	{
+	//		ERR_PRINT(lRetVal);
+	//		LOOP_FOREVER();
+	//	}
 
 	//
 	// Start the task scheduler
