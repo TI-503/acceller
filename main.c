@@ -229,43 +229,10 @@ void DelayMs(float time)
 	UtilsDelay((unsigned long)ulCount);
 }
 
-//void doubleShake(float src_time, float dest_time)
-//{
-//	g_shakeEn = 1;
-//	//Report("%f, %f\r\n",src_time, dest_time);
-//	int loop = 25;
-//	float delta = (src_time - dest_time) / (loop-1);
-//	//Report("delta: %f\r\n",delta);
-//	int i;
-//	float start = src_time;
-//	float start_4 = dest_time;
-//	for( i =0 ;i<loop;i++)
-//	{
-//		//Report("start: %f\r\n",start);
-//		GPIOPinWrite(GPIOA0_BASE, 0x8, 0x8);
-//		//DelayMs(start);
-//		MAP_UtilsDelay((unsigned long)80000*start/6);
-//		GPIOPinWrite(GPIOA0_BASE, 0x8, 0);
-//		MAP_UtilsDelay((unsigned long)80000*(20-start)/6);
-//		//DelayMs(20.0-start);
-//
-//
-//		GPIOPinWrite(GPIOA1_BASE, 0x20,0x20);
-//		//DelayMs(start_4);
-//		MAP_UtilsDelay((unsigned long)80000*start_4/6);
-//		GPIOPinWrite(GPIOA1_BASE, 0x20,0);
-//		//DelayMs(20-start_4);
-//		MAP_UtilsDelay((unsigned long)80000*(20-start_4)/6);
-//
-//		start += delta;
-//		start_4 -= delta;
-//	}
-//}
 void doubleShake(float src_time, float dest_time)
 {
 	g_shakeEn = 1;
-	//Report("%f, %f\r\n",src_time, dest_time);
-	float delta = 0.005;
+	float delta = 0.004;
 	if(src_time<dest_time)
 	{
 
@@ -276,10 +243,12 @@ void doubleShake(float src_time, float dest_time)
 	}
 	//Report("delta: %f\r\n",delta);
 	float start = src_time;
-	float start_4 = dest_time;
-	for( ; (delta >=0&&start<=dest_time) || (delta<0&&start>=dest_time);)
+	float start_4 = (float)((float)3.2 - src_time);
+	int loop = (int) ((dest_time - src_time)/delta+1);
+	int i=0;
+	for( i=0;i<loop;i++)
 	{
-		//Report("start: %f\r\n",start);
+		//Report("start: %f, %f\r\n",start,start_4);
 		GPIOPinWrite(GPIOA0_BASE, 0x8, 0x8);
 		//DelayMs(start);
 		MAP_UtilsDelay((unsigned long)80000*start/6);
@@ -304,7 +273,7 @@ void noShake()
 {
 	g_shakeEn = 0;
 	int i = 0;
-	for(i=0;i<10;i++)
+	for(i=0;i<20;i++)
 	{
 		GPIOPinWrite(GPIOA0_BASE, 0x8, 0x8);
 		GPIOPinWrite(GPIOA1_BASE, 0x20,0x20);
@@ -712,22 +681,6 @@ void sendPacket()
 	// waiting for an incoming TCP connection
 	while (iNewSockID < 0)
 	{
-		// accepts a connection form a TCP client, if there is any
-		// otherwise returns SL_EAGAIN
-		iNewSockID = sl_Accept(g_iServerSockID, (struct SlSockAddr_t *)&sAddr,
-				(SlSocklen_t*)&iAddrSize);
-		if (iNewSockID == SL_EAGAIN)
-		{
-			MAP_UtilsDelay(10000);
-		}
-		else if (iNewSockID < 0)
-		{
-			// error
-			sl_Close(iNewSockID);
-			//sl_Close(iSockID);
-			ASSERT_ON_ERROR(ACCEPT_ERROR);
-		}
-		//Report("%d,%d\r\n",g_isShake ,g_shakeEn);
 		// if shake  then shake
 		// else than back to mid_pos
 		if (g_isShake == 1) // to left
@@ -749,6 +702,24 @@ void sendPacket()
 				noShake();
 			}
 		}
+
+		// accepts a connection form a TCP client, if there is any
+		// otherwise returns SL_EAGAIN
+		iNewSockID = sl_Accept(g_iServerSockID, (struct SlSockAddr_t *)&sAddr,
+				(SlSocklen_t*)&iAddrSize);
+		if (iNewSockID == SL_EAGAIN)
+		{
+			MAP_UtilsDelay(10000);
+		}
+		else if (iNewSockID < 0)
+		{
+			// error
+			sl_Close(iNewSockID);
+			//sl_Close(iSockID);
+			ASSERT_ON_ERROR(ACCEPT_ERROR);
+		}
+		//Report("%d,%d\r\n",g_isShake ,g_shakeEn);
+
 	}
 
 	Report("Accept a new connectiong from %d.%d.%d.%d:%d\n\r",
@@ -781,6 +752,27 @@ void sendPacket()
 
 		while(1)
 		{
+			if(g_isShake ==0)
+			{
+				if(g_shakeEn == 1)
+				{
+					noShake();
+				}
+			}
+			else if (g_isShake == 1) // to left
+			{
+				doubleShake(1.6,1.5);
+				doubleShake(1.5,1.6);
+				g_isShake = 2;
+			}
+			else if(g_isShake == 2)
+			{
+				doubleShake(1.6,1.7);
+				doubleShake(1.7,1.6);
+				g_isShake = 1;
+			}
+			// else // g_isShake == 0
+
 			//Get the TMP and Acc value
 			CollectTmp(NULL);
 			osi_Sleep(200);
@@ -806,6 +798,7 @@ void sendPacket()
 				else if(strcmp(g_cBsdBuf,"noshake") == 0)
 				{
 					g_isShake = 0;
+					noShake();
 				}
 			}
 			first = 1;
@@ -827,26 +820,7 @@ void sendPacket()
 
 			}
 			Report("Sent packets successfully\n\r");
-
-			if (g_isShake == 1) // to left
-			{
-				doubleShake(1.6,1.5);
-				doubleShake(1.5,1.6);
-				g_isShake = 2;
-			}
-			else if(g_isShake == 2)
-			{
-				doubleShake(1.6,1.7);
-				doubleShake(1.7,1.6);
-				g_isShake = 1;
-			}
-			else
-			{
-				if(g_shakeEn == 1)
-				{
-					noShake();
-				}
-			}
+			Report("%d, %d\r\n", g_isShake, g_shakeEn);
 		}
 
 	}
@@ -1443,6 +1417,7 @@ void main()
 
 	// ¶æ»ú³õÊ¼»¯
 	g_isShake = 0;
+	g_shakeEn = 1;
 	//
 	// Start the SimpleLink Host
 	//
